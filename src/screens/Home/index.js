@@ -1,23 +1,38 @@
 import React, { useState } from 'react';
+import { Button, Spinner } from 'react-bootstrap';
 import api from '../../services/api';
+import 'bootstrap/dist/css/bootstrap.css';
 
 import './styles.css';
 
 const Home = props => {
   const [userName, setUserName] = useState('');
+  const [user, setUser] = useState({
+    full_name: '',
+    profile_picture:
+      'https://avatars2.githubusercontent.com/u/7540050?s=460&v=4',
+    isPrivate: false
+  }); // TODO: Change profile_picture placeholder
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = event => {
-    setUserName(event.target.value);
+    if (event.target.value.charAt(0) === '@') {
+      setUserName(event.target.value);
+    } else {
+      setUserName(`@${event.target.value}`);
+    }
   };
 
   const handleSubmit = async event => {
     event.preventDefault();
-    const user = await api.post(
+    if (userName.length <= 1) return;
+    setLoading(true);
+    const userResponse = await api.post(
       '/graphql',
       {
         query: `
       query {
-        user(username:"${userName}"){
+        user(username:"${userName.substring(1)}"){
           full_name
           profile_picture
           isPrivate
@@ -30,25 +45,8 @@ const Home = props => {
         }
       }
     );
-    const feed = await api.post(
-      '/graphql',
-      {
-        query: `
-        query {
-          feed(username:'${userName}') {
-            id
-          }
-        }
-      `
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    console.log(feed);
-    console.log(user);
+    setUser(userResponse.data.data.user);
+    setLoading(false);
   };
 
   return (
@@ -57,16 +55,25 @@ const Home = props => {
         <h1>Instagram Giveway</h1>
       </div>
       <form onSubmit={handleSubmit}>
-        <img
-          src={'https://avatars2.githubusercontent.com/u/7540050?s=460&v=4'}
-          alt=""
-        />
+        <img src={user.profile_picture} alt="" />
         <input
-          placeholder="@meuinstagram"
+          placeholder="@username"
           value={userName}
           onChange={handleInputChange}
         />
-        <button type="submit">Prosseguir</button>
+        <Button disabled={loading} type="submit">
+          {loading ? (
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
+          ) : (
+            'Prosseguir'
+          )}
+        </Button>
       </form>
     </div>
   );
